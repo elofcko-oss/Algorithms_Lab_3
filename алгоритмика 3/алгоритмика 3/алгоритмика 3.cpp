@@ -1,54 +1,122 @@
-﻿
 #include <iostream>
 #include <string>
 #include <limits>
+#include <locale>
 
 using namespace std;
 
-struct Node {
+struct StackNode {
     string name;
-    int priority;
-    Node* next;
+    StackNode* next;
 
-    Node(const string& n, int p = 0)
-        : name(n), priority(p), next(nullptr) {
-    }
+    explicit StackNode(const string& n)
+        : name(n), next(nullptr) {}
 };
 
-// Вывод списка
-void printList(Node* head, bool showPriority = false) {
-    if (head == nullptr) {
-        cout << "Список пуст.\n";
+void stackPush(StackNode*& top, const string& name) {
+    StackNode* node = new StackNode(name);
+    node->next = top;
+    top = node;
+}
+
+void stackPop(StackNode*& top) {
+    if (top == nullptr) {
+        cout << "Стек пуст.\n";
         return;
     }
+    StackNode* temp = top;
+    cout << "Извлечён элемент: " << temp->name << '\n';
+    top = top->next;
+    delete temp;
+}
 
+void printStack(StackNode* current) {
+    if (current == nullptr) {
+        cout << "Стек пуст.\n";
+        return;
+    }
     int number = 1;
-
-    while (head != nullptr) {
-        cout << number++ << ". " << head->name;
-
-        if (showPriority) {
-            cout << " (приоритет: " << head->priority << ")";
-        }
-
-        cout << '\n';
-        head = head->next;
+    while (current != nullptr) {
+        cout << number++ << ". " << current->name << " (верх стека)\n";
+        current = current->next;
     }
 }
 
-// Освобождение памяти
-void clearList(Node*& head) {
+void clearStack(StackNode*& top) {
+    while (top != nullptr) {
+        StackNode* temp = top;
+        top = top->next;
+        delete temp;
+    }
+}
+
+
+struct QueueNode {
+    string name;
+    QueueNode* next;
+
+    explicit QueueNode(const string& n)
+        : name(n), next(nullptr) {}
+};
+
+void queueEnqueue(QueueNode*& head, QueueNode*& tail, const string& name) {
+    QueueNode* node = new QueueNode(name);
+    if (tail == nullptr) {          // очередь была пустой
+        head = node;
+    } else {
+        tail->next = node;
+    }
+    tail = node;
+}
+
+void queueDequeue(QueueNode*& head, QueueNode*& tail) {
+    if (head == nullptr) {
+        cout << "Очередь пуста.\n";
+        return;
+    }
+    QueueNode* temp = head;
+    cout << "Извлечён элемент: " << temp->name << '\n';
+    head = head->next;
+    if (head == nullptr) {           // очередь стала пустой
+        tail = nullptr;
+    }
+    delete temp;
+}
+
+void printQueue(QueueNode* current) {
+    if (current == nullptr) {
+        cout << "Очередь пуста.\n";
+        return;
+    }
+    int number = 1;
+    while (current != nullptr) {
+        cout << number++ << ". " << current->name << " (FIFO)\n";
+        current = current->next;
+    }
+}
+
+void clearQueue(QueueNode*& head) {
     while (head != nullptr) {
-        Node* temp = head;
+        QueueNode* temp = head;
         head = head->next;
         delete temp;
     }
 }
 
-// Добавление в приоритетную очередь
-// Чем больше число, тем выше приоритет
-void priorityInsert(Node*& head, const string& name, int priority) {
-    Node* node = new Node(name, priority);
+
+
+struct PriorityNode {
+    string name;
+    int priority;
+    PriorityNode* next;
+
+    explicit PriorityNode(const string& n, int p = 0)
+        : name(n), priority(p), next(nullptr) {}
+};
+
+// Вставка по приоритету (сортировка по убыванию: больший приоритет — ближе к голове)
+void priorityInsert(PriorityNode*& head, const string& name, int priority) {
+    PriorityNode* node = new PriorityNode(name, priority);
 
     if (head == nullptr || priority > head->priority) {
         node->next = head;
@@ -56,10 +124,8 @@ void priorityInsert(Node*& head, const string& name, int priority) {
         return;
     }
 
-    Node* current = head;
-
-    while (current->next != nullptr &&
-        current->next->priority >= priority) {
+    PriorityNode* current = head;
+    while (current->next != nullptr && current->next->priority >= priority) {
         current = current->next;
     }
 
@@ -67,150 +133,104 @@ void priorityInsert(Node*& head, const string& name, int priority) {
     current->next = node;
 }
 
-// Извлечение элемента с наивысшим приоритетом
-void priorityRemove(Node*& head) {
+void priorityRemove(PriorityNode*& head) {
     if (head == nullptr) {
         cout << "Приоритетная очередь пуста.\n";
         return;
     }
-
-    Node* temp = head;
-
+    PriorityNode* temp = head;
     cout << "Извлечён элемент: " << temp->name
-        << ", приоритет: " << temp->priority << '\n';
-
+         << ", приоритет: " << temp->priority << '\n';
     head = head->next;
     delete temp;
 }
 
-// Поиск элемента по имени
-Node* priorityFind(Node* head, const string& name) {
-    while (head != nullptr) {
-        if (head->name == name) {
-            return head;
+PriorityNode* priorityFind(PriorityNode* head, const string& name) {
+    PriorityNode* current = head;
+    while (current != nullptr) {
+        if (current->name == name) {
+            return current;
         }
-
-        head = head->next;
+        current = current->next;
     }
-
     return nullptr;
 }
 
-// Удаление элемента по имени
-bool priorityDelete(Node*& head, const string& name) {
-    Node* current = head;
-    Node* previous = nullptr;
+bool priorityDelete(PriorityNode*& head, const string& name) {
+    PriorityNode* current = head;
+    PriorityNode* previous = nullptr;
 
     while (current != nullptr) {
         if (current->name == name) {
             if (previous == nullptr) {
                 head = current->next;
-            }
-            else {
+            } else {
                 previous->next = current->next;
             }
-
             delete current;
             return true;
         }
-
         previous = current;
         current = current->next;
     }
-
     return false;
 }
 
-// Добавление в обычную очередь
-void queueEnqueue(Node*& head, Node*& tail, const string& name) {
-    Node* node = new Node(name);
-
-    if (tail == nullptr) {
-        head = node;
-    }
-    else {
-        tail->next = node;
-    }
-
-    tail = node;
-}
-
-// Извлечение из обычной очереди
-void queueDequeue(Node*& head, Node*& tail) {
-    if (head == nullptr) {
-        cout << "Очередь пуста.\n";
+void printPriorityQueue(PriorityNode* current, bool showPriority = false) {
+    if (current == nullptr) {
+        cout << "Приоритетная очередь пуста.\n";
         return;
     }
-
-    Node* temp = head;
-
-    cout << "Извлечён элемент: " << temp->name << '\n';
-
-    head = head->next;
-
-    if (head == nullptr) {
-        tail = nullptr;
+    int number = 1;
+    while (current != nullptr) {
+        cout << number++ << ". " << current->name;
+        if (showPriority) {
+            cout << " (приоритет: " << current->priority << ")";
+        }
+        cout << '\n';
+        current = current->next;
     }
-
-    delete temp;
 }
 
-// Добавление в стек
-void stackPush(Node*& top, const string& name) {
-    Node* node = new Node(name);
-
-    node->next = top;
-    top = node;
-}
-
-// Извлечение из стека
-void stackPop(Node*& top) {
-    if (top == nullptr) {
-        cout << "Стек пуст.\n";
-        return;
+void clearPriorityQueue(PriorityNode*& head) {
+    while (head != nullptr) {
+        PriorityNode* temp = head;
+        head = head->next;
+        delete temp;
     }
-
-    Node* temp = top;
-
-    cout << "Извлечён элемент: " << temp->name << '\n';
-
-    top = top->next;
-    delete temp;
 }
 
-// Ввод непустого названия
+
 string readName() {
     string name;
-
     getline(cin, name);
-
+   
+    if (!name.empty() && name.back() == '\r') {
+        name.pop_back();
+    }
     if (name.empty()) {
         cout << "Название не должно быть пустым.\n";
         return "";
     }
-
     return name;
 }
 
 int main() {
     setlocale(LC_ALL, "Russian");
 
-    Node* priorityHead = nullptr;
-
-    Node* queueHead = nullptr;
-    Node* queueTail = nullptr;
-
-    Node* stackTop = nullptr;
+    PriorityNode* pHead = nullptr;                  // Приоритетная очередь
+    QueueNode* qHead = nullptr, *qTail = nullptr;  // Обычная очередь
+    StackNode* sTop = nullptr;                      // Стек
 
     int choice;
 
     do {
-        cout << "\n===== ЛАБОРАТОРНАЯ РАБОТА №3 =====\n";
+        cout << "\n===== ЛАБОРАТОРНАЯ РАБОТА №3 (РАЗНЫЕ СТРУКТУРЫ) =====\n";
         cout << "1. Добавить в приоритетную очередь\n";
         cout << "2. Извлечь из приоритетной очереди\n";
         cout << "3. Показать приоритетную очередь\n";
-        cout << "4. Найти элемент по имени\n";
-        cout << "5. Удалить элемент по имени\n";
+        cout << "4. Найти элемент по имени (приоритетная)\n";
+        cout << "5. Удалить элемент по имени (приоритетная)\n";
         cout << "6. Добавить в обычную очередь\n";
         cout << "7. Извлечь из обычной очереди\n";
         cout << "8. Показать обычную очередь\n";
@@ -221,140 +241,117 @@ int main() {
         cout << "Ваш выбор: ";
 
         if (!(cin >> choice)) {
-            cout << "Ошибка ввода. Завершение программы.\n";
-            break;
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Ошибка ввода. Пожалуйста, введите число.\n";
+            continue;
         }
 
-        // Удаляем символ перевода строки после числа
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         string name;
         int priority;
 
         switch (choice) {
-        case 1:
-            cout << "Введите название элемента: ";
-            name = readName();
-
-            if (name.empty()) {
+            case 1:
+                cout << "Введите название элемента: ";
+                name = readName();
+                if (name.empty()) break;
+                cout << "Введите приоритет (больше = выше): ";
+                if (!(cin >> priority)) {
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    cout << "Некорректный приоритет.\n";
+                    break;
+                }
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                priorityInsert(pHead, name, priority);
+                cout << "Элемент добавлен.\n";
                 break;
-            }
 
-            cout << "Введите приоритет (больше = выше): ";
-
-            if (!(cin >> priority)) {
-                cout << "Некорректный приоритет.\n";
-                cin.clear();
-                cin.ignore(
-                    numeric_limits<streamsize>::max(), '\n'
-                );
+            case 2:
+                priorityRemove(pHead);
                 break;
-            }
 
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-            priorityInsert(priorityHead, name, priority);
-            cout << "Элемент добавлен.\n";
-            break;
-
-        case 2:
-            priorityRemove(priorityHead);
-            break;
-
-        case 3:
-            cout << "\nПриоритетная очередь:\n";
-            printList(priorityHead, true);
-            break;
-
-        case 4: {
-            cout << "Введите имя для поиска: ";
-            name = readName();
-
-            if (name.empty()) {
+            case 3:
+                cout << "\nПриоритетная очередь:\n";
+                printPriorityQueue(pHead, true);
                 break;
-            }
 
-            Node* found = priorityFind(priorityHead, name);
-
-            if (found != nullptr) {
-                cout << "Элемент найден: " << found->name
-                    << ", приоритет: " << found->priority << '\n';
-            }
-            else {
-                cout << "Элемент не найден.\n";
-            }
-
-            break;
-        }
-
-        case 5:
-            cout << "Введите имя для удаления: ";
-            name = readName();
-
-            if (name.empty()) {
+            case 4:
+                cout << "Введите имя для поиска: ";
+                name = readName();
+                if (name.empty()) break;
+                PriorityNode* found = priorityFind(pHead, name);
+                if (found != nullptr) {
+                    cout << "Элемент найден: " << found->name
+                         << ", приоритет: " << found->priority << '\n';
+                } else {
+                    cout << "Элемент не найден.\n";
+                }
                 break;
-            }
 
-            if (priorityDelete(priorityHead, name)) {
-                cout << "Элемент удалён.\n";
-            }
-            else {
-                cout << "Элемент не найден.\n";
-            }
-            break;
+            case 5:
+                cout << "Введите имя для удаления: ";
+                name = readName();
+                if (name.empty()) break;
+                if (priorityDelete(pHead, name)) {
+                    cout << "Элемент удалён.\n";
+                } else {
+                    cout << "Элемент не найден.\n";
+                }
+                break;
 
-        case 6:
-            cout << "Введите название элемента: ";
-            name = readName();
+            case 6:
+                cout << "Введите название элемента: ";
+                name = readName();
+                if (!name.empty()) {
+                    queueEnqueue(qHead, qTail, name);
+                    cout << "Элемент добавлен в очередь.\n";
+                }
+                break;
 
-            if (!name.empty()) {
-                queueEnqueue(queueHead, queueTail, name);
-                cout << "Элемент добавлен в очередь.\n";
-            }
-            break;
+            case 7:
+                queueDequeue(qHead, qTail);
+                break;
 
-        case 7:
-            queueDequeue(queueHead, queueTail);
-            break;
+            case 8:
+                cout << "\nОбычная очередь (FIFO):\n";
+                printQueue(qHead);
+                break;
 
-        case 8:
-            cout << "\nОбычная очередь (FIFO):\n";
-            printList(queueHead);
-            break;
+            case 9:
+                cout << "Введите название элемента: ";
+                name = readName();
+                if (!name.empty()) {
+                    stackPush(sTop, name);
+                    cout << "Элемент добавлен в стек.\n";
+                }
+                break;
 
-        case 9:
-            cout << "Введите название элемента: ";
-            name = readName();
+            case 10:
+                stackPop(sTop);
+                break;
 
-            if (!name.empty()) {
-                stackPush(stackTop, name);
-                cout << "Элемент добавлен в стек.\n";
-            }
-            break;
+            case 11:
+                cout << "\nСтек (сверху вниз, LIFO):\n";
+                printStack(sTop);
+                break;
 
-        case 10:
-            stackPop(stackTop);
-            break;
+            case 0:
+                cout << "Завершение программы.\n";
+                break;
 
-        case 11:
-            cout << "\nСтек (сверху вниз, LIFO):\n";
-            printList(stackTop);
-            break;
-
-        case 0:
-            cout << "Завершение программы.\n";
-            break;
-
-        default:
-            cout << "Такого пункта меню нет.\n";
+            default:
+                cout << "Такого пункта меню нет. Выберите от 0 до 11.\n";
         }
 
     } while (choice != 0);
 
-    // Освобождение всей выделенной памяти
-    clearList(priorityHead);
-    clearList(queueHead);
-    clearList(stackTop);
+    // Освобождение памяти по каждой структуре отдельно
+    clearPriorityQueue(pHead);
+    clearQueue(qHead);
+    clearStack(sTop);
 
     return 0;
 }
