@@ -1,79 +1,141 @@
+
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
 
-// Структура одного элемента списка
-typedef struct Node {
-    char name[256];       // Название элемента
-    int priority;         // Приоритет элемента
-    struct Node* next;    // Указатель на следующий элемент
-} Node;
+#define NAME_SIZE 256
 
+typedef struct Node {
+    char name[NAME_SIZE];
+    int priority;
+    struct Node* next;
+} Node;
 
 // Создание нового элемента
 Node* createNode(const char* name, int priority) {
-    Node* node = (Node*)malloc(sizeof(Node));
+    Node* newNode = (Node*)malloc(sizeof(Node));
 
-    if (node == NULL) {
+    if (newNode == NULL) {
         printf("Ошибка выделения памяти!\n");
         return NULL;
     }
 
-    strncpy(node->name, name, sizeof(node->name) - 1);
-    node->name[sizeof(node->name) - 1] = '\0';
+    strncpy(newNode->name, name, NAME_SIZE - 1);
+    newNode->name[NAME_SIZE - 1] = '\0';
 
-    node->priority = priority;
-    node->next = NULL;
+    newNode->priority = priority;
+    newNode->next = NULL;
 
-    return node;
+    return newNode;
 }
 
+// Очистка ввода
+void clearInput(void) {
+    int ch;
+
+    while ((ch = getchar()) != '\n' && ch != EOF) {
+    }
+}
+
+// Ввод названия
+void readName(char* name, size_t size) {
+    size_t len;
+
+    if (fgets(name, (int)size, stdin) == NULL) {
+        name[0] = '\0';
+        return;
+    }
+
+    len = strlen(name);
+
+    if (len > 0 && name[len - 1] == '\n') {
+        name[len - 1] = '\0';
+    } else {
+        clearInput();
+    }
+}
+
+// Ввод числа с проверкой
+int readInt(const char* message, int* value) {
+    printf("%s", message);
+
+    if (scanf("%d", value) != 1) {
+        printf("Ошибка: необходимо ввести число.\n");
+        clearInput();
+        return 0;
+    }
+
+    clearInput();
+    return 1;
+}
 
 // Вывод списка
-void printList(Node* head, int showPriority) {
+void printList(Node* head) {
     if (head == NULL) {
         printf("Список пуст.\n");
         return;
     }
 
-    int number = 1;
-
     while (head != NULL) {
-        printf("%d. %s", number++, head->name);
+        printf("Название: %s", head->name);
+        printf(" | Приоритет: %d\n", head->priority);
 
-        if (showPriority) {
-            printf(" (приоритет: %d)", head->priority);
-        }
-
-        printf("\n");
         head = head->next;
     }
 }
 
-
-// Освобождение всей памяти списка
+// Освобождение памяти
 void clearList(Node** head) {
-    while (*head != NULL) {
-        Node* temp = *head;
-        *head = (*head)->next;
+    Node* current = *head;
+
+    while (current != NULL) {
+        Node* temp = current;
+        current = current->next;
         free(temp);
     }
+
+    *head = NULL;
 }
 
+// Поиск по подстроке
+void searchBySubstring(Node* head, const char* substring) {
+    int found = 0;
+
+    if (substring[0] == '\0') {
+        printf("Подстрока не должна быть пустой.\n");
+        return;
+    }
+
+    while (head != NULL) {
+        if (strstr(head->name, substring) != NULL) {
+            printf("Название: %s | Приоритет: %d\n",
+                   head->name, head->priority);
+            found = 1;
+        }
+
+        head = head->next;
+    }
+
+    if (!found) {
+        printf("Совпадений не найдено.\n");
+    }
+}
 
 // Добавление в приоритетную очередь
 // Чем больше число, тем выше приоритет
 void priorityInsert(Node** head, const char* name, int priority) {
-    Node* node = createNode(name, priority);
+    Node* newNode = createNode(name, priority);
 
-    if (node == NULL) {
+    if (newNode == NULL) {
         return;
     }
 
-    if (*head == NULL || priority > (*head)->priority) {
-        node->next = *head;
-        *head = node;
+    if (*head == NULL || (*head)->priority < priority) {
+        newNode->next = *head;
+        *head = newNode;
         return;
     }
 
@@ -84,12 +146,11 @@ void priorityInsert(Node** head, const char* name, int priority) {
         current = current->next;
     }
 
-    node->next = current->next;
-    current->next = node;
+    newNode->next = current->next;
+    current->next = newNode;
 }
 
-
-// Извлечение элемента с наивысшим приоритетом
+// Удаление первого элемента приоритетной очереди
 void priorityRemove(Node** head) {
     if (*head == NULL) {
         printf("Приоритетная очередь пуста.\n");
@@ -98,74 +159,65 @@ void priorityRemove(Node** head) {
 
     Node* temp = *head;
 
-    printf("Извлечён элемент: %s, приоритет: %d\n",
-           temp->name, temp->priority);
+    printf("Удалён элемент: %s\n", temp->name);
 
     *head = (*head)->next;
     free(temp);
 }
 
-
-// Поиск элемента по имени
-Node* priorityFind(Node* head, const char* name) {
-    while (head != NULL) {
-        if (strcmp(head->name, name) == 0) {
-            return head;
-        }
-
-        head = head->next;
-    }
-
-    return NULL;
-}
-
-
-// Удаление элемента по имени
-int priorityDelete(Node** head, const char* name) {
+// Удаление из приоритетной очереди по названию
+void priorityDelete(Node** head, const char* name) {
     Node* current = *head;
     Node* previous = NULL;
+    int found = 0;
 
     while (current != NULL) {
         if (strcmp(current->name, name) == 0) {
+            Node* temp = current;
+
             if (previous == NULL) {
                 *head = current->next;
-            }
-            else {
+            } else {
                 previous->next = current->next;
             }
 
-            free(current);
-            return 1;
+            current = current->next;
+            free(temp);
+            found = 1;
+        } else {
+            previous = current;
+            current = current->next;
         }
-
-        previous = current;
-        current = current->next;
     }
 
-    return 0;
+    if (found) {
+        printf("Элементы удалены.\n");
+    } else {
+        printf("Элемент не найден.\n");
+    }
 }
 
-
 // Добавление в обычную очередь
-void queueEnqueue(Node** head, Node** tail, const char* name) {
-    Node* node = createNode(name, 0);
+void queueEnqueue(Node** head, Node** tail,
+                  const char* name, int priority) {
+    Node* newNode = createNode(name, priority);
 
-    if (node == NULL) {
+    if (newNode == NULL) {
         return;
     }
 
     if (*tail == NULL) {
-        *head = node;
-    }
-    else {
-        (*tail)->next = node;
+        *head = newNode;
+        *tail = newNode;
+    } else {
+        (*tail)->next = newNode;
+        *tail = newNode;
     }
 
-    *tail = node;
+    printf("Элемент добавлен в очередь.\n");
 }
 
-
-// Извлечение из обычной очереди
+// Удаление из обычной очереди
 void queueDequeue(Node** head, Node** tail) {
     if (*head == NULL) {
         printf("Очередь пуста.\n");
@@ -174,7 +226,7 @@ void queueDequeue(Node** head, Node** tail) {
 
     Node* temp = *head;
 
-    printf("Извлечён элемент: %s\n", temp->name);
+    printf("Удалён элемент: %s\n", temp->name);
 
     *head = (*head)->next;
 
@@ -185,21 +237,130 @@ void queueDequeue(Node** head, Node** tail) {
     free(temp);
 }
 
+// Удаление из очереди по названию
+void queueDeleteByName(Node** head, Node** tail,
+                       const char* name) {
+    Node* current = *head;
+    Node* previous = NULL;
+    int found = 0;
 
-// Добавление в стек
-void stackPush(Node** top, const char* name) {
-    Node* node = createNode(name, 0);
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            Node* temp = current;
 
-    if (node == NULL) {
+            if (previous == NULL) {
+                *head = current->next;
+            } else {
+                previous->next = current->next;
+            }
+
+            current = current->next;
+
+            if (temp == *tail) {
+                *tail = previous;
+            }
+
+            free(temp);
+            found = 1;
+        } else {
+            previous = current;
+            current = current->next;
+        }
+    }
+
+    if (*head == NULL) {
+        *tail = NULL;
+    }
+
+    if (found) {
+        printf("Элементы с таким названием удалены.\n");
+    } else {
+        printf("Элементы с таким названием не найдены.\n");
+    }
+}
+
+// Удаление из очереди по приоритету
+void queueDeleteByPriority(Node** head, Node** tail,
+                           int priority) {
+    Node* current = *head;
+    Node* previous = NULL;
+    int found = 0;
+
+    while (current != NULL) {
+        if (current->priority == priority) {
+            Node* temp = current;
+
+            if (previous == NULL) {
+                *head = current->next;
+            } else {
+                previous->next = current->next;
+            }
+
+            current = current->next;
+
+            if (temp == *tail) {
+                *tail = previous;
+            }
+
+            free(temp);
+            found = 1;
+        } else {
+            previous = current;
+            current = current->next;
+        }
+    }
+
+    if (*head == NULL) {
+        *tail = NULL;
+    }
+
+    if (found) {
+        printf("Элементы с таким приоритетом удалены.\n");
+    } else {
+        printf("Элементы с таким приоритетом не найдены.\n");
+    }
+}
+
+// Инвертирование обычной очереди
+void queueReverse(Node** head, Node** tail) {
+    Node* previous = NULL;
+    Node* current = *head;
+    Node* next = NULL;
+
+    if (*head == NULL || (*head)->next == NULL) {
+        printf("Для инвертирования недостаточно элементов.\n");
         return;
     }
 
-    node->next = *top;
-    *top = node;
+    *tail = *head;
+
+    while (current != NULL) {
+        next = current->next;
+        current->next = previous;
+        previous = current;
+        current = next;
+    }
+
+    *head = previous;
+
+    printf("Очередь успешно инвертирована.\n");
 }
 
+// Добавление в стек
+void stackPush(Node** top, const char* name) {
+    Node* newNode = createNode(name, 0);
 
-// Извлечение из стека
+    if (newNode == NULL) {
+        return;
+    }
+
+    newNode->next = *top;
+    *top = newNode;
+
+    printf("Элемент добавлен в стек.\n");
+}
+
+// Удаление из стека
 void stackPop(Node** top) {
     if (*top == NULL) {
         printf("Стек пуст.\n");
@@ -208,42 +369,13 @@ void stackPop(Node** top) {
 
     Node* temp = *top;
 
-    printf("Извлечён элемент: %s\n", temp->name);
+    printf("Удалён элемент: %s\n", temp->name);
 
     *top = (*top)->next;
     free(temp);
 }
 
-
-// Ввод непустого названия
-int readName(char* name, size_t size) {
-    printf("Введите название элемента: ");
-
-    if (fgets(name, size, stdin) == NULL) {
-        return 0;
-    }
-
-    name[strcspn(name, "\n")] = '\0';
-
-    if (name[0] == '\0') {
-        printf("Название не должно быть пустым.\n");
-        return 0;
-    }
-
-    return 1;
-}
-
-
-// Очистка остатка строки ввода
-void clearInput(void) {
-    int c;
-
-    while ((c = getchar()) != '\n' && c != EOF) {
-    }
-}
-
-
-// Главная функция программы
+// Главное меню
 int main(void) {
     setlocale(LC_ALL, "");
 
@@ -256,152 +388,202 @@ int main(void) {
 
     int choice;
     int priority;
-
-    char name[256];
+    int answer;
+    char name[NAME_SIZE];
+    char substring[NAME_SIZE];
 
     do {
-        printf("\n===== ЛАБОРАТОРНАЯ РАБОТА №3 =====\n");
-        printf("1. Добавить в приоритетную очередь\n");
-        printf("2. Извлечь из приоритетной очереди\n");
+        printf("\n========== ГЛАВНОЕ МЕНЮ ==========\n");
+
+        printf("\n--- ПРИОРИТЕТНАЯ ОЧЕРЕДЬ ---\n");
+        printf("1. Добавить элемент\n");
+        printf("2. Удалить элемент с наивысшим приоритетом\n");
         printf("3. Показать приоритетную очередь\n");
-        printf("4. Найти элемент по имени\n");
-        printf("5. Удалить элемент по имени\n");
-        printf("6. Добавить в обычную очередь\n");
-        printf("7. Извлечь из обычной очереди\n");
-        printf("8. Показать обычную очередь\n");
-        printf("9. Добавить в стек\n");
-        printf("10. Извлечь из стека\n");
-        printf("11. Показать стек\n");
-        printf("0. Выход\n");
+        printf("4. Поиск по подстроке\n");
+        printf("5. Удалить элемент по названию\n");
 
-        printf("Ваш выбор: ");
+        printf("\n--- ОБЫЧНАЯ ОЧЕРЕДЬ ---\n");
+        printf("6. Добавить элемент\n");
+        printf("7. Удалить первый элемент\n");
+        printf("8. Показать очередь\n");
+        printf("9. Удалить элементы по названию\n");
+        printf("10. Удалить элементы по приоритету\n");
+        printf("11. Поиск по подстроке\n");
+        printf("12. Инвертировать очередь\n");
 
-        if (scanf("%d", &choice) != 1) {
-            printf("Ошибка ввода.\n");
-            clearInput();
+        printf("\n--- СТЕК ---\n");
+        printf("13. Добавить элемент\n");
+        printf("14. Удалить верхний элемент\n");
+        printf("15. Показать стек\n");
+        printf("16. Поиск по подстроке\n");
+
+        printf("\n0. Выход\n");
+        printf("==================================\n");
+
+        if (!readInt("Выберите действие: ", &choice)) {
             continue;
         }
 
-        clearInput();
-
         switch (choice) {
 
+        // ПРИОРИТЕТНАЯ ОЧЕРЕДЬ
+
         case 1:
-            if (!readName(name, sizeof(name))) {
+            printf("Введите название элемента: ");
+            readName(name, sizeof(name));
+
+            if (name[0] == '\0') {
+                printf("Название не может быть пустым.\n");
                 break;
             }
 
-            printf("Введите приоритет (больше = выше): ");
-
-            if (scanf("%d", &priority) != 1) {
-                printf("Некорректный приоритет.\n");
-                clearInput();
+            if (!readInt("Введите приоритет: ", &priority)) {
                 break;
             }
-
-            clearInput();
 
             priorityInsert(&priorityHead, name, priority);
-            printf("Элемент добавлен.\n");
             break;
-
 
         case 2:
             priorityRemove(&priorityHead);
             break;
 
-
         case 3:
             printf("\nПриоритетная очередь:\n");
-            printList(priorityHead, 1);
+            printList(priorityHead);
             break;
 
+        case 4:
+            printf("Введите подстроку для поиска: ");
+            readName(substring, sizeof(substring));
 
-        case 4: {
-            if (!readName(name, sizeof(name))) {
-                break;
-            }
-
-            Node* found = priorityFind(priorityHead, name);
-
-            if (found != NULL) {
-                printf("Элемент найден: %s, приоритет: %d\n",
-                       found->name, found->priority);
-            }
-            else {
-                printf("Элемент не найден.\n");
-            }
-
+            searchBySubstring(priorityHead, substring);
             break;
-        }
-
 
         case 5:
-            if (!readName(name, sizeof(name))) {
+            printf("Введите название для удаления: ");
+            readName(name, sizeof(name));
+
+            priorityDelete(&priorityHead, name);
+            break;
+
+        // ОБЫЧНАЯ ОЧЕРЕДЬ
+
+        case 6:
+            printf("Введите название элемента: ");
+            readName(name, sizeof(name));
+
+            if (name[0] == '\0') {
+                printf("Название не может быть пустым.\n");
                 break;
             }
 
-            if (priorityDelete(&priorityHead, name)) {
-                printf("Элемент удалён.\n");
-            }
-            else {
-                printf("Элемент не найден.\n");
+            if (!readInt("Введите приоритет: ", &priority)) {
+                break;
             }
 
+            queueEnqueue(&queueHead, &queueTail,
+                         name, priority);
             break;
-
-
-        case 6:
-            if (readName(name, sizeof(name))) {
-                queueEnqueue(&queueHead, &queueTail, name);
-                printf("Элемент добавлен в очередь.\n");
-            }
-
-            break;
-
 
         case 7:
             queueDequeue(&queueHead, &queueTail);
             break;
 
-
         case 8:
-            printf("\nОбычная очередь (FIFO):\n");
-            printList(queueHead, 0);
+            printf("\nОбычная очередь:\n");
+            printList(queueHead);
             break;
-
 
         case 9:
-            if (readName(name, sizeof(name))) {
-                stackPush(&stackTop, name);
-                printf("Элемент добавлен в стек.\n");
-            }
+            printf("Введите название для удаления: ");
+            readName(name, sizeof(name));
 
+            queueDeleteByName(&queueHead, &queueTail, name);
             break;
 
-
         case 10:
+            if (!readInt("Введите приоритет для удаления: ",
+                         &priority)) {
+                break;
+            }
+
+            queueDeleteByPriority(&queueHead, &queueTail,
+                                  priority);
+            break;
+
+        case 11:
+            printf("Введите подстроку для поиска: ");
+            readName(substring, sizeof(substring));
+
+            searchBySubstring(queueHead, substring);
+            break;
+
+        case 12:
+            if (queueHead == NULL) {
+                printf("Очередь пуста. Нечего инвертировать.\n");
+                break;
+            }
+
+            printf("\nТекущая очередь:\n");
+            printList(queueHead);
+
+            if (!readInt(
+                "\nВы действительно хотите инвертировать очередь? (1 - Да, 0 - Нет): ",
+                &answer)) {
+                break;
+            }
+
+            if (answer == 1) {
+                queueReverse(&queueHead, &queueTail);
+
+                printf("\nОчередь после инвертирования:\n");
+                printList(queueHead);
+            } else {
+                printf("Инвертирование отменено.\n");
+            }
+            break;
+
+        // СТЕК
+
+        case 13:
+            printf("Введите название элемента: ");
+            readName(name, sizeof(name));
+
+            if (name[0] == '\0') {
+                printf("Название не может быть пустым.\n");
+                break;
+            }
+
+            stackPush(&stackTop, name);
+            break;
+
+        case 14:
             stackPop(&stackTop);
             break;
 
-
-        case 11:
-            printf("\nСтек (сверху вниз, LIFO):\n");
-            printList(stackTop, 0);
+        case 15:
+            printf("\nСтек:\n");
+            printList(stackTop);
             break;
 
+        case 16:
+            printf("Введите подстроку для поиска: ");
+            readName(substring, sizeof(substring));
+
+            searchBySubstring(stackTop, substring);
+            break;
 
         case 0:
             printf("Завершение программы.\n");
             break;
 
-
         default:
-            printf("Такого пункта меню нет.\n");
+            printf("Неверный пункт меню. Попробуйте снова.\n");
+            break;
         }
 
     } while (choice != 0);
-
 
     // Освобождение всей выделенной памяти
     clearList(&priorityHead);
