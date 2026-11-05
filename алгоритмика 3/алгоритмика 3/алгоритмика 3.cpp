@@ -100,8 +100,8 @@ void clearList(Node** head) {
     *head = NULL;
 }
 
-// Поиск по подстроке
-void searchBySubstring(Node* head, const char* substring) {
+// Поиск по подстроке только в приоритетной очереди
+void searchPriorityBySubstring(Node* head, const char* substring) {
     int found = 0;
 
     if (substring[0] == '\0') {
@@ -408,14 +408,12 @@ int main(void) {
         printf("8. Показать очередь\n");
         printf("9. Удалить элементы по названию\n");
         printf("10. Удалить элементы по приоритету\n");
-        printf("11. Поиск по подстроке\n");
         printf("12. Инвертировать очередь\n");
 
         printf("\n--- СТЕК ---\n");
         printf("13. Добавить элемент\n");
         printf("14. Удалить верхний элемент\n");
         printf("15. Показать стек\n");
-        printf("16. Поиск по подстроке\n");
 
         printf("\n0. Выход\n");
         printf("==================================\n");
@@ -457,7 +455,7 @@ int main(void) {
             printf("Введите подстроку для поиска: ");
             readName(substring, sizeof(substring));
 
-            searchBySubstring(priorityHead, substring);
+            searchPriorityBySubstring(priorityHead, substring);
             break;
 
         case 5:
@@ -512,13 +510,6 @@ int main(void) {
                                   priority);
             break;
 
-        case 11:
-            printf("Введите подстроку для поиска: ");
-            readName(substring, sizeof(substring));
-
-            searchBySubstring(queueHead, substring);
-            break;
-
         case 12:
             if (queueHead == NULL) {
                 printf("Очередь пуста. Нечего инвертировать.\n");
@@ -565,13 +556,6 @@ int main(void) {
         case 15:
             printf("\nСтек:\n");
             printList(stackTop);
-            break;
-
-        case 16:
-            printf("Введите подстроку для поиска: ");
-            readName(substring, sizeof(substring));
-
-            searchBySubstring(stackTop, substring);
             break;
 
         case 0:
